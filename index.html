@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1D2B2F">
+<title>Dryer monitor</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --mist: #E7EEEC;
+    --panel: #F6F9F8;
+    --ink: #1D2B2F;
+    --ink-soft: #52656A;
+    --line: #C9D6D3;
+    --leaf: #2F7D5B;
+    --cool: #3C5A9A;
+    --hot: #A3244B;
+    --mango: #C98204;
+    --mango-soft: #F4E2BC;
+    --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --text: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --mist: #142024; --panel: #1C2B30; --ink: #E6EEEC; --ink-soft: #9FB3B0;
+      --line: #2E4248; --leaf: #5FBF92; --cool: #8AA6E0; --hot: #E57A98;
+      --mango: #F0B23E; --mango-soft: #3D3320;
+    }
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html, body { margin: 0; background: var(--mist); color: var(--ink); }
+  body { font-family: var(--text); font-size: 17px; line-height: 1.45; }
+  main { max-width: 440px; margin: 0 auto; padding: 16px 18px 40px; }
+
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  h1 { font-family: var(--display); font-weight: 700; font-size: 1.35rem; margin: 0; letter-spacing: -0.01em; }
+  .conn { display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--ink-soft); }
+  .conn i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); display: inline-block; }
+  .conn.live i { background: var(--leaf); }
+  .conn.stale i { background: var(--mango); }
+  .conn.off i { background: var(--hot); }
+
+  /* The dial: the one bold element */
+  .dial { position: relative; margin: 4px auto 0; width: 100%; max-width: 340px; }
+  .dial svg { width: 100%; height: auto; display: block; }
+  .dial .reading { position: absolute; left: 0; right: 0; top: 47%; text-align: center; }
+  .temp { font-family: var(--display); font-weight: 700; font-size: 4.6rem; line-height: 1; letter-spacing: -0.03em; }
+  .temp small { font-size: 0.38em; font-weight: 500; margin-left: 2px; vertical-align: 0.9em; }
+  .temp-caption { color: var(--ink-soft); font-size: 0.95rem; margin-top: 2px; }
+  .advice { text-align: center; font-weight: 700; font-size: 1.05rem; margin: 6px 0 22px; min-height: 1.5em; }
+  .advice.cool { color: var(--cool); } .advice.ok { color: var(--leaf); } .advice.hot { color: var(--hot); }
+
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; margin-bottom: 12px; }
+  section h2 { font-size: 0.95rem; font-weight: 700; color: var(--ink-soft); margin: 0 0 6px; }
+  .big { font-family: var(--display); font-weight: 700; font-size: 2.2rem; line-height: 1.1; }
+  .row { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+  .note { color: var(--ink-soft); font-size: 0.9rem; margin: 6px 0 0; }
+  #spark { width: 150px; height: 44px; }
+
+  input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 44px; background: transparent; margin: 8px 0 0; }
+  input[type=range]::-webkit-slider-runnable-track { height: 10px; border-radius: 5px; background: linear-gradient(to right, var(--mango) var(--pct, 0%), var(--mango-soft) var(--pct, 0%)); }
+  input[type=range]::-moz-range-track { height: 10px; border-radius: 5px; background: var(--mango-soft); }
+  input[type=range]::-moz-range-progress { height: 10px; border-radius: 5px; background: var(--mango); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 30px; height: 30px; border-radius: 50%; background: var(--panel); border: 3px solid var(--mango); margin-top: -10px; }
+  input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 50%; background: var(--panel); border: 3px solid var(--mango); }
+  .presets { display: flex; gap: 8px; margin-top: 6px; }
+  button { font: inherit; font-weight: 700; color: var(--ink); background: transparent; border: 1.5px solid var(--line); border-radius: 10px; padding: 9px 14px; cursor: pointer; min-height: 44px; }
+  button.primary { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--mango); outline-offset: 2px; }
+  .presets button { flex: 1; }
+
+  .power { display: flex; align-items: center; gap: 14px; }
+  .power svg { width: 34px; height: 34px; flex: none; }
+
+  footer { text-align: center; margin-top: 18px; }
+  footer button { border: none; color: var(--ink-soft); text-decoration: underline; }
+
+  dialog { border: none; border-radius: 16px; padding: 22px 20px; width: min(420px, 92vw); background: var(--panel); color: var(--ink); }
+  dialog::backdrop { background: rgba(20, 32, 36, 0.55); }
+  dialog h2 { font-family: var(--display); font-size: 1.3rem; margin: 0 0 4px; }
+  label { display: block; font-weight: 700; font-size: 0.95rem; margin-top: 14px; }
+  label span { display: block; font-weight: 400; color: var(--ink-soft); font-size: 0.85rem; }
+  dialog input { width: 100%; font: inherit; padding: 10px 12px; margin-top: 6px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--mist); color: var(--ink); }
+  .pair { display: flex; gap: 12px; } .pair label { flex: 1; }
+  .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+  .error { color: var(--hot); font-size: 0.9rem; margin-top: 10px; min-height: 1.2em; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    #needle { transition: transform 0.8s cubic-bezier(.2,.8,.2,1); }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1 id="title">Dryer</h1>
+    <span class="conn" id="conn"><i></i><span id="connText">Not connected</span></span>
+  </header>
+
+  <div class="dial" aria-live="polite">
+    <svg viewBox="0 0 300 200" role="img" aria-label="Chamber temperature dial">
+      <path d="M30 170 A120 120 0 0 1 270 170" fill="none" stroke="var(--line)" stroke-width="18" stroke-linecap="round"/>
+      <path id="band" fill="none" stroke="var(--leaf)" stroke-width="18" opacity="0.35"/>
+      <g id="ticks"></g>
+      <text x="30" y="196" text-anchor="middle" font-size="13" fill="var(--ink-soft)" font-family="Atkinson Hyperlegible, sans-serif">0</text>
+      <text x="270" y="196" text-anchor="middle" font-size="13" fill="var(--ink-soft)" font-family="Atkinson Hyperlegible, sans-serif">100</text>
+      <g id="needle" style="transform-origin:150px 170px;transform:rotate(-90deg)">
+        <circle cx="150" cy="50" r="13" fill="var(--panel)" stroke="var(--ink)" stroke-width="5"/>
+      </g>
+    </svg>
+    <div class="reading">
+      <div class="temp"><span id="temp">--</span><small>°C</small></div>
+      <div class="temp-caption">Chamber temperature</div>
+    </div>
+  </div>
+  <p class="advice" id="advice">Waiting for the dryer…</p>
+
+  <section>
+    <h2>Chamber humidity</h2>
+    <div class="row">
+      <div class="big"><span id="hum">--</span>%</div>
+      <svg id="spark" viewBox="0 0 150 44" aria-hidden="true"><polyline id="sparkLine" fill="none" stroke="var(--cool)" stroke-width="2.5" stroke-linejoin="round" points=""/></svg>
+    </div>
+    <p class="note" id="humNote">The line shows humidity since you opened the app. A steady fall at a steady temperature means the food is drying.</p>
+  </section>
+
+  <section>
+    <h2>Fan speed</h2>
+    <div class="big"><span id="fan">--</span>%</div>
+    <input type="range" id="fanSlider" min="0" max="100" step="5" value="0" aria-label="Fan speed">
+    <div class="presets">
+      <button data-fan="0">Off</button><button data-fan="50">50%</button><button data-fan="100">Full</button>
+    </div>
+    <p class="note" id="fanNote">Set from the knob</p>
+  </section>
+
+  <section>
+    <h2>Power source</h2>
+    <div class="power">
+      <svg viewBox="0 0 34 34" aria-hidden="true" id="powerIcon"></svg>
+      <div><div class="big" style="font-size:1.6rem" id="power">--</div></div>
+    </div>
+  </section>
+
+  <footer><button id="openSettings">Connection settings</button></footer>
+</main>
+
+<dialog id="settings">
+  <h2>Connection settings</h2>
+  <p class="note" style="margin-top:0">These stay on this phone only. Use the same server, username and password as in the ESP32 code.</p>
+  <label>Server address<span>From your MQTT server's overview page, e.g. abc123.ala.eu-central-1.emqxsl.com</span><input id="sHost" autocomplete="off" spellcheck="false"></label>
+  <label>WebSocket port<span>EMQX: 8084. HiveMQ: 8884.</span><input id="sPort" type="number" inputmode="numeric"></label>
+  <label>Username<input id="sUser" autocomplete="off" spellcheck="false"></label>
+  <label>Password<input id="sPass" type="password" autocomplete="off"></label>
+  <label>Device ID<span>Must match DEVICE_ID in the ESP32 code</span><input id="sDevice" autocomplete="off" spellcheck="false"></label>
+  <div class="pair">
+    <label>Drying range from (°C)<input id="sLow" type="number" inputmode="numeric"></label>
+    <label>to (°C)<input id="sHigh" type="number" inputmode="numeric"></label>
+  </div>
+  <p class="error" id="sError"></p>
+  <div class="actions">
+    <button id="cancelSettings">Cancel</button>
+    <button class="primary" id="saveSettings">Save and connect</button>
+  </div>
+</dialog>
+
+<script src="https://unpkg.com/mqtt@5/dist/mqtt.min.js"></script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const MAX_C = 100;              // dial runs 0 to 100 °C
+  const STALE_MS = 20000;         // no update for 20 s = not live
+
+  // ---------- settings (stored on this phone only) ----------
+  const defaults = { host: "", wsPort: 8084, user: "", pass: "", device: "dryer01", low: 50, high: 70 };
+  let cfg;
+  try { cfg = { ...defaults, ...JSON.parse(localStorage.getItem("dryerCfg") || "{}") }; }
+  catch { cfg = { ...defaults }; }
+  const saveCfg = () => { try { localStorage.setItem("dryerCfg", JSON.stringify(cfg)); } catch {} };
+
+  // ---------- dial geometry ----------
+  const angleFor = c => -90 + (Math.max(0, Math.min(MAX_C, c)) / MAX_C) * 180;
+  const point = (c, r) => {
+    const a = (angleFor(c) - 90) * Math.PI / 180;
+    return [150 + r * Math.cos(a), 170 + r * Math.sin(a)];
+  };
+  function drawBand() {
+    const [x1, y1] = point(cfg.low, 120), [x2, y2] = point(cfg.high, 120);
+    $("band").setAttribute("d", `M${x1.toFixed(1)} ${y1.toFixed(1)} A120 120 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}`);
+  }
+  function drawTicks() {
+    let g = "";
+    for (let c = 10; c < 100; c += 10) {
+      const [x1, y1] = point(c, 104), [x2, y2] = point(c, c === 50 ? 96 : 99);
+      g += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--ink-soft)" stroke-width="2"/>`;
+    }
+    $("ticks").innerHTML = g;
+  }
+
+  // ---------- rendering ----------
+  const humHistory = [];
+  let lastState = null, lastSeen = 0, deviceStatus = "unknown", sliderBusy = false;
+
+  function render() {
+    const s = lastState;
+    if (!s) return;
+    if (s.t !== null && s.t !== undefined) {
+      $("temp").textContent = s.t.toFixed(1);
+      $("needle").style.transform = `rotate(${angleFor(s.t)}deg)`;
+      const adv = $("advice");
+      if (s.t < cfg.low) { adv.textContent = "Below the drying range. Add charcoal."; adv.className = "advice cool"; }
+      else if (s.t > cfg.high) { adv.textContent = "Above the drying range. Reduce the charcoal."; adv.className = "advice hot"; }
+      else { adv.textContent = "In the drying range."; adv.className = "advice ok"; }
+    } else {
+      $("temp").textContent = "--";
+      $("advice").textContent = "The temperature sensor is not responding.";
+      $("advice").className = "advice hot";
+    }
+    $("hum").textContent = (s.h !== null && s.h !== undefined) ? s.h.toFixed(0) : "--";
+    $("fan").textContent = s.fan;
+    $("fanNote").textContent = s.src === "app" ? "Set from the phone" : "Set from the knob";
+    if (!sliderBusy) setSlider(s.fan);
+    const nepa = s.power === "NEPA";
+    $("power").textContent = nepa ? "NEPA" : "Solar battery";
+    $("powerIcon").innerHTML = nepa
+      ? '<path d="M19 3 L8 19 H16 L14 31 L26 14 H18 Z" fill="var(--mango)"/>'
+      : '<rect x="4" y="9" width="24" height="16" rx="3" fill="none" stroke="var(--leaf)" stroke-width="3"/><rect x="28" y="14" width="3" height="6" rx="1" fill="var(--leaf)"/><rect x="8" y="13" width="12" height="8" rx="1" fill="var(--leaf)"/>';
+    drawSpark();
+  }
+
+  function drawSpark() {
+    if (humHistory.length < 2) { $("sparkLine").setAttribute("points", ""); return; }
+    const vals = humHistory.map(p => p.h);
+    let lo = Math.min(...vals), hi = Math.max(...vals);
+    if (hi - lo < 4) { const m = (hi + lo) / 2; lo = m - 2; hi = m + 2; }
+    const pts = humHistory.map((p, i) => {
+      const x = (i / (humHistory.length - 1)) * 146 + 2;
+      const y = 40 - ((p.h - lo) / (hi - lo)) * 36;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+    $("sparkLine").setAttribute("points", pts.join(" "));
+  }
+
+  function setSlider(v) {
+    const el = $("fanSlider");
+    el.value = v;
+    el.style.setProperty("--pct", v + "%");
+  }
+
+  function updateConn() {
+    const el = $("conn"), txt = $("connText");
+    el.className = "conn";
+    if (!client || !client.connected) { txt.textContent = cfg.host ? "Connecting…" : "Not set up"; return; }
+    if (deviceStatus === "offline") { el.classList.add("off"); txt.textContent = "Dryer offline"; return; }
+    if (!lastSeen) { txt.textContent = "Waiting for dryer"; return; }
+    const age = Date.now() - lastSeen;
+    if (age < STALE_MS) { el.classList.add("live"); txt.textContent = "Live"; }
+    else {
+      el.classList.add("stale");
+      const mins = Math.round(age / 60000);
+      txt.textContent = mins < 1 ? "Last update under a minute ago" : `Last update ${mins} min ago`;
+    }
+  }
+  setInterval(updateConn, 5000);
+
+  // ---------- MQTT ----------
+  let client = null;
+  const topic = name => `dehydrator/${cfg.device}/${name}`;
+
+  function connect() {
+    if (client) { client.end(true); client = null; }
+    lastState = null; lastSeen = 0; deviceStatus = "unknown"; humHistory.length = 0;
+    $("title").textContent = cfg.device ? `Dryer ${cfg.device.replace(/^dryer/i, "")}`.trim() : "Dryer";
+    updateConn();
+    if (!cfg.host || !cfg.user) { $("advice").textContent = "Open connection settings to link this phone to the dryer."; return; }
+
+    client = mqtt.connect(`wss://${cfg.host}:${cfg.wsPort || 8084}/mqtt`, {
+      username: cfg.user, password: cfg.pass,
+      clientId: "app-" + Math.random().toString(16).slice(2, 10),
+      reconnectPeriod: 5000, connectTimeout: 10000, clean: true
+    });
+    client.on("connect", () => {
+      client.subscribe([topic("state"), topic("status")], { qos: 1 });
+      updateConn();
+    });
+    client.on("reconnect", updateConn);
+    client.on("close", updateConn);
+    client.on("error", err => {
+      $("advice").textContent = /auth|not authorized|bad user/i.test(err.message)
+        ? "The server rejected the username or password. Check connection settings."
+        : "Cannot reach the server. Check the server address and your internet.";
+      $("advice").className = "advice hot";
+    });
+    client.on("message", (t, payload) => {
+      const msg = payload.toString();
+      if (t === topic("status")) { deviceStatus = msg; updateConn(); return; }
+      if (t === topic("state")) {
+        let s; try { s = JSON.parse(msg); } catch { return; }
+        lastState = s;
+        lastSeen = s.ts > 0 ? s.ts * 1000 : Date.now();
+        if (typeof s.h === "number") {
+          humHistory.push({ h: s.h, at: Date.now() });
+          while (humHistory.length > 360) humHistory.shift();  // about 30 minutes
+        }
+        render(); updateConn();
+      }
+    });
+  }
+
+  function sendFan(v) {
+    if (!client || !client.connected) {
+      $("fanNote").textContent = "Not connected. The fan was not changed.";
+      return;
+    }
+    client.publish(topic("cmd/fan"), String(v), { qos: 1 });
+    $("fanNote").textContent = `Sending ${v}% to the dryer…`;
+  }
+
+  // ---------- controls ----------
+  const slider = $("fanSlider");
+  slider.addEventListener("input", () => { sliderBusy = true; $("fan").textContent = slider.value; slider.style.setProperty("--pct", slider.value + "%"); });
+  slider.addEventListener("change", () => { sendFan(+slider.value); setTimeout(() => sliderBusy = false, 1500); });
+  document.querySelectorAll("[data-fan]").forEach(b => b.addEventListener("click", () => {
+    const v = +b.dataset.fan; setSlider(v); $("fan").textContent = v; sendFan(v);
+  }));
+
+  const dlg = $("settings");
+  $("openSettings").addEventListener("click", () => {
+    $("sHost").value = cfg.host; $("sPort").value = cfg.wsPort || 8084; $("sUser").value = cfg.user; $("sPass").value = cfg.pass;
+    $("sDevice").value = cfg.device; $("sLow").value = cfg.low; $("sHigh").value = cfg.high;
+    $("sError").textContent = ""; dlg.showModal();
+  });
+  $("cancelSettings").addEventListener("click", () => dlg.close());
+  $("saveSettings").addEventListener("click", () => {
+    const host = $("sHost").value.trim().replace(/^(wss?|https?|mqtts?):\/\//, "").replace(/[:/].*$/, "");
+    const low = +$("sLow").value, high = +$("sHigh").value;
+    if (!host || !$("sUser").value.trim()) { $("sError").textContent = "Enter the server address and username."; return; }
+    if (!(low < high)) { $("sError").textContent = "The drying range must start below where it ends."; return; }
+    cfg = { host, wsPort: +$("sPort").value || 8084, user: $("sUser").value.trim(), pass: $("sPass").value, device: $("sDevice").value.trim() || "dryer01", low, high };
+    saveCfg(); drawBand(); dlg.close(); connect();
+  });
+
+  drawTicks(); drawBand(); setSlider(0); connect();
+  if (!cfg.host) dlg.showModal();
+
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+})();
+</script>
+</body>
+</html>
